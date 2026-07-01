@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>5x5 全自訂智慧機械車位模擬系統</title>
+    <title>機械車位模擬系統</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,7 +27,7 @@
         .container {
             display: flex;
             gap: 30px;
-            max-width: 1200px;
+            max-width: 1250px;
             width: 100%;
         }
         /* 控制面板 */
@@ -50,13 +50,11 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
-        /* ========================================== */
-        /* 核心修改：升級為 5 欄 × 5 列的網格規格        */
-        /* ========================================== */
+        /* 5 欄 × 5 列的網格規格 */
         .parking-grid {
             display: grid;
-            grid-template-columns: repeat(5, 110px); /* 5 欄，微調寬度符合大螢幕 */
-            grid-template-rows: repeat(5, 90px);     /* 5 列，微調高度 */
+            grid-template-columns: repeat(5, 115px); 
+            grid-template-rows: repeat(5, 95px);     
             gap: 8px;
             background: #bdc3c7;
             padding: 15px;
@@ -78,12 +76,12 @@
             transition: all 0.2s ease;
             box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
             user-select: none;
-            width: 110px;
-            height: 90px;
+            width: 115px;
+            height: 95px;
+            position: relative;
         }
         .car-space:hover {
-            transform: scale(1.02);
-            filter: brightness(1.1);
+            filter: brightness(1.05);
         }
         /* 運轉空格樣式 */
         .car-space.empty {
@@ -121,6 +119,36 @@
             background: #e74c3c;
         }
         
+        /* ========================================== */
+        /* 手動操控按鈕樣式 (▲ ▼ ◀ ▶)                 */
+        /* ========================================== */
+        .arrow-btn {
+            position: absolute;
+            background: rgba(241, 196, 15, 0.95);
+            color: #2c3e50;
+            border: 1px solid #f39c12;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+        .arrow-btn:hover {
+            background: #f39c12;
+            color: white;
+            transform: scale(1.1);
+        }
+        .arrow-up    { top: 4px; left: 50%; transform: translateX(-50%); }
+        .arrow-down  { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .arrow-left  { left: 4px; top: 50%; transform: translateY(-50%); }
+        .arrow-right { right: 4px; top: 50%; transform: translateY(-50%); }
+
         /* 表格與按鈕樣式 */
         .step-table {
             width: 100%;
@@ -190,19 +218,19 @@
 </head>
 <body>
 
-    <h1>5x5 智慧路徑與自主佈局 機械車位模擬系統</h1>
-    <div class="subtitle">升級型大容量矩陣，支援自由設定 25 格空間之極致簡報工具</div>
+    <h1>5x5 智慧控制與自主運轉 機械車位模擬系統</h1>
+    <div class="subtitle">全面升級：點擊選定車位即可喚出操控面板，體驗真正的車位調度</div>
 
     <div class="container">
         <div class="control-panel">
             <h3>📊 運轉數據面板</h3>
             
             <div class="mode-indicator" id="mode-text">
-                🎯 目前模式：簡報測試 (點車設為目標)
+                🎯 目前模式：自主運轉/簡報測試
             </div>
 
             <div class="status-box">
-                <div>目標出庫車：<span id="target-display" style="font-size:18px; color:#e74c3c; font-weight:bold;">無 (請點擊車位)</span></div>
+                <div>目標出庫車：<span id="target-display" style="font-size:18px; color:#e74c3c; font-weight:bold;">7 號車</span></div>
                 <div>目前出入口座標：<span id="gate-display" style="font-size:15px; color:#2ecc71; font-weight:bold;">未設定</span></div>
                 <div>累積移動步數：<span id="step-count" style="font-size:18px; color:#e74c3c; font-weight:bold;">0</span> 步</div>
             </div>
@@ -236,33 +264,32 @@
             <div class="parking-grid" id="grid">
                 </div>
             <div id="tip-text" style="margin-top: 15px; color: #7f8c8d; font-size: 14px; text-align: center;">
-                ※ 點擊任何非目標車位可切換目標；再次點擊目標車（或非卡死車位）即可<b>手動滑動格子</b>。
+                ※ <b>操作秘訣：</b>點選任一台車會浮現操作箭頭，你可以自行手動點箭頭操控車位方向。
             </div>
         </div>
     </div>
 
 <script>
-    // ========================================== 
-    // 核心修改：預設 5x5 的矩陣佈局
-    // 1~18代表車位, 0=空格, -1=牆壁, -2=出入口
-    // ========================================== 
     const defaultLayout = [
         [1,  2,  3,  4,  -1],
         [5,  6,  7,  8,  -1],
         [9,  10, 11, 12, 0],
         [13, 14, 15, 16, 0],
-        [-2, 17, 18, 0,  -1] // 預設左下角為出入口，並留有多個空格方便運轉
+        [-2, 17, 18, 0,  -1] 
     ];
     
     let savedLayout = JSON.parse(JSON.stringify(defaultLayout));
     let currentLayout = JSON.parse(JSON.stringify(defaultLayout));
     
     let stepCount = 0;
-    let targetCar = 7; // 預設目標車改為 7 號車
+    let targetCar = 7; 
     let isEditMode = false; 
     let isAnimating = false; 
+    
+    // 用來紀錄畫面上哪一台車子正被「選取且開啟控制面板」
+    let activeRow = null;
+    let activeCol = null;
 
-    // 重新排序並把場上殘留車子順序編號 (1, 2, 3...)
     function autoReconstructNumbers() {
         let counter = 1;
         for (let r = 0; r < 5; r++) {
@@ -291,6 +318,12 @@
         } else {
             document.getElementById('gate-display').innerText = "未設定 (將無法出庫)";
         }
+    }
+
+    // 檢查某一格相鄰的特定方向是不是空格(0或-2)
+    function isSpaceEmpty(r, c) {
+        if (r < 0 || r >= 5 || c < 0 || c >= 5) return false;
+        return currentLayout[r][c] === 0 || currentLayout[r][c] === -2;
     }
 
     function renderGrid() {
@@ -350,16 +383,31 @@
                             cell.innerText = `🌟 ${val}號車`;
                         }
                         
-                        cell.onclick = () => {
+                        // 點擊車位選取它，開啟四向按鈕
+                        cell.onclick = (e) => {
                             if (isAnimating) return;
-                            if (val !== targetCar) {
+                            // 如果點擊非目前的目標車，設為新的目標
+                            if (val !== targetCar && activeRow !== r && activeCol !== c) {
                                 targetCar = val;
                                 document.getElementById('target-display').innerText = targetCar + " 號車";
-                                renderGrid();
-                            } else {
-                                moveCar(r, c, true);
                             }
+                            
+                            // 更新選取聚焦狀態
+                            activeRow = r;
+                            activeCol = c;
+                            renderGrid();
                         };
+
+                        // 如果當前格子是被選定的車位，且沒有在自動演示中，則渲染控制箭頭
+                        if (r === activeRow && c === activeCol && !isAnimating) {
+                            cell.style.boxShadow = "0 0 0 4px #f1c40f"; // 黃色高亮外框
+                            
+                            // 檢查四個方向是否有空格，有就長按鈕
+                            if (isSpaceEmpty(r - 1, c)) createArrow(cell, '▲', 'arrow-up',    () => manualMove(r, c, -1, 0, 'Y'));
+                            if (isSpaceEmpty(r + 1, c)) createArrow(cell, '▼', 'arrow-down',  () => manualMove(r, c, 1, 0, 'Y'));
+                            if (isSpaceEmpty(r, c - 1)) createArrow(cell, '◀', 'arrow-left',  () => manualMove(r, c, 0, -1, 'X'));
+                            if (isSpaceEmpty(r, c + 1)) createArrow(cell, '▶', 'arrow-right', () => manualMove(r, c, 0, 1, 'X'));
+                        }
                     }
                 }
                 gridEl.appendChild(cell);
@@ -368,8 +416,41 @@
         document.getElementById('step-count').innerText = stepCount;
     }
 
+    // 建立方向箭頭元素
+    function createArrow(parent, text, className, clickCallback) {
+        const btn = document.createElement('div');
+        btn.className = `arrow-btn ${className}`;
+        btn.innerText = text;
+        btn.onclick = (e) => {
+            e.stopPropagation(); // 防止點擊箭頭觸發格子的選取事件
+            clickCallback();
+        };
+        parent.appendChild(btn);
+    }
+
+    // 使用者親自手動點擊箭頭移動
+    function manualMove(r, c, dr, dc, axis) {
+        const nr = r + dr;
+        const nc = c + dc;
+        const carNum = currentLayout[r][c];
+
+        // 升降或橫移直接與空位做數據交換
+        currentLayout[nr][nc] = carNum;
+        currentLayout[r][c] = 0;
+
+        // 選取焦點跟著車子移過去
+        activeRow = nr;
+        activeCol = nc;
+
+        stepCount++;
+        logStep(carNum, axis, (dr !== 0 ? dr : dc));
+        renderGrid();
+        checkWin();
+    }
+
     function toggleMode() {
         if (isAnimating) return;
+        activeRow = null; activeCol = null; // 清除選取
         
         const modeText = document.getElementById('mode-text');
         const toggleBtn = document.getElementById('toggle-btn');
@@ -395,13 +476,12 @@
                 alert("⚠️ 請至少在畫面上指定一個【🚪 出入口】，否則車子會找不到出口！");
                 return;
             }
-            
             isEditMode = false;
-            modeText.innerText = "🎯 目前模式：簡報測試 (點車設為目標)";
+            modeText.innerText = "🎯 目前模式：簡報測試 (點車操作運轉)";
             modeText.className = "mode-indicator";
             toggleBtn.innerText = "🛠️ 切換至：自訂佈局(編輯模式)";
             gridTitle.innerText = "🚗 機械車位矩陣（簡報測試中）";
-            tipText.innerText = "※ 點擊任何車位可將其設為「目標車」，隨後點擊智慧尋路即可自動出庫。";
+            tipText.innerText = "※ <b>操作秘訣：</b>點選任一台車會浮現操作箭頭，你可以自行手動點箭頭操控車位方向。";
             finderBtn.style.display = "block";
             
             autoReconstructNumbers();
@@ -414,52 +494,30 @@
                 if(targetCar) break;
             }
             document.getElementById('target-display').innerText = targetCar ? targetCar + " 號車" : "無";
-            
             renderGrid();
         }
     }
 
-    // 基礎位移核心：搜尋範圍擴大至 5x5 的邊界
+    // 後端尋路與演算法核心用的位移執行 (不包含選取外觀控制)
     function executeMove(layout, r, c) {
-        // 1. 橫移檢查 (0~4)
-        for (let targetCol = 0; targetCol < 5; targetCol++) {
-            let targetVal = layout[r][targetCol];
-            if (targetVal === 0 || targetVal === -2) { 
-                let hasObstacle = false;
-                let start = Math.min(c, targetCol);
-                let end = Math.max(c, targetCol);
-                for (let i = start; i <= end; i++) {
-                    if (layout[r][i] === -1) hasObstacle = true;
-                }
-                if (!hasObstacle) {
+        const directions = [{dr:-1, dc:0, axis:'Y'}, {dr:1, dc:0, axis:'Y'}, {dr:0, dc:-1, axis:'X'}, {dr:0, dc:1, axis:'X'}];
+        for(let d of directions) {
+            let nr = r + d.dr;
+            let nc = c + d.dc;
+            if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
+                if (layout[nr][nc] === 0 || layout[nr][nc] === -2) {
                     let nextLayout = JSON.parse(JSON.stringify(layout));
                     const carNum = nextLayout[r][c];
-                    
-                    if (targetCol > c) {
-                        for (let i = targetCol; i > c; i--) nextLayout[r][i] = nextLayout[r][i-1];
-                    } else {
-                        for (let i = targetCol; i < c; i++) nextLayout[r][i] = nextLayout[r][i+1];
-                    }
+                    nextLayout[nr][nc] = carNum;
                     nextLayout[r][c] = 0;
-                    return { success: true, layout: nextLayout, car: carNum, axis: 'X', dir: targetCol > c ? 1 : -1, clickPos: [r, c] };
+                    return { success: true, layout: nextLayout, car: carNum, axis: d.axis, dir: (d.dr!==0?d.dr:d.dc), clickPos: [r, c], nextPos:[nr, nc] };
                 }
-            }
-        }
-        // 2. 升降檢查 (0~4)
-        for (let targetRow = 0; targetRow < 5; targetRow++) {
-            let targetVal = layout[targetRow][c];
-            if ((targetVal === 0 || targetVal === -2) && targetVal !== -1) {
-                let nextLayout = JSON.parse(JSON.stringify(layout));
-                const carNum = nextLayout[r][c];
-                nextLayout[targetRow][c] = carNum;
-                nextLayout[r][c] = 0;
-                return { success: true, layout: nextLayout, car: carNum, axis: 'Y', dir: targetRow > r ? 1 : -1, clickPos: [r, c] };
             }
         }
         return { success: false };
     }
 
-    function moveCar(r, c, isManual) {
+    function autoMoveStep(r, c) {
         let result = executeMove(currentLayout, r, c);
         if (result.success) {
             currentLayout = result.layout;
@@ -467,17 +525,15 @@
             logStep(result.car, result.axis, result.dir);
             renderGrid();
             checkWin();
-            return true;
         }
-        return false;
     }
 
     function logStep(carNum, axis, val) {
         const tbody = document.getElementById('step-log');
         if (stepCount === 1) tbody.innerHTML = ''; 
         const row = document.createElement('tr');
-        const xText = axis === 'X' ? (val > 0 ? `+${val} (右移)` : `${val} (左移)`) : '0';
-        const yText = axis === 'Y' ? (val > 0 ? `+${val} (下移)` : `${val} (上移)`) : '0';
+        const xText = axis === 'X' ? (val > 0 ? `+1 (右移)` : `-1 (左移)`) : '0';
+        const yText = axis === 'Y' ? (val > 0 ? `+1 (下移)` : `-1 (上移)`) : '0';
         row.innerHTML = `<td>${stepCount}</td><td style="font-weight:bold; color:#2980b9;">${carNum} 號車</td><td>${xText}</td><td>${yText}</td>`;
         tbody.appendChild(row);
         tbody.parentElement.parentElement.scrollTop = tbody.parentElement.parentElement.scrollHeight;
@@ -487,14 +543,13 @@
         let gatePos = findGateCoordinates(savedLayout);
         if (gatePos && currentLayout[gatePos.r][gatePos.c] === targetCar) {
             setTimeout(() => {
-                alert(`🎉 成功出庫！${targetCar}號車已順利到達自訂出入口。共花費 ${stepCount} 步。`);
+                alert(`🎉 成功出庫！${targetCar}號車已順利手動運轉至出入口。共花費 ${stepCount} 步。`);
             }, 300);
         }
     }
 
     function serializeLayout(layout) { return layout.map(row => row.join(',')).join('|'); }
 
-    // BFS 智慧搜尋演算法 (完全支援 5x5 矩陣)
     function solveParking(startLayout, target) {
         let gatePos = findGateCoordinates(savedLayout);
         if (!gatePos) return null;
@@ -503,29 +558,32 @@
         let visited = new Set();
         visited.add(serializeLayout(startLayout));
 
-        // 限制搜尋最大節點數，避免 5x5 完全開放空間計算過久
         let nodeCount = 0;
-        const MAX_NODES = 30000; 
+        const MAX_NODES = 40000; 
 
         while (queue.length > 0) {
             let current = queue.shift();
             nodeCount++;
-            
-            if (current.layout[gatePos.r][gatePos.c] === target) {
-                return current.path;
-            }
-
-            if (nodeCount > MAX_NODES) return null; // 防止極端死鎖卡頓
+            if (current.layout[gatePos.r][gatePos.c] === target) return current.path;
+            if (nodeCount > MAX_NODES) return null; 
 
             for (let r = 0; r < 5; r++) {
                 for (let c = 0; c < 5; c++) {
                     if (current.layout[r][c] > 0) {
-                        let res = executeMove(current.layout, r, c);
-                        if (res.success) {
-                            let layoutStr = serializeLayout(res.layout);
-                            if (!visited.has(layoutStr)) {
-                                visited.add(layoutStr);
-                                queue.push({ layout: res.layout, path: current.path.concat([res.clickPos]) });
+                        // 尋找鄰近所有空格
+                        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                        for(let d of dirs) {
+                            let nr = r + d[0], nc = c + d[1];
+                            if(nr>=0 && nr<5 && nc>=0 && nc<5 && (current.layout[nr][nc]===0 || current.layout[nr][nc]=== -2)) {
+                                let nextLayout = JSON.parse(JSON.stringify(current.layout));
+                                nextLayout[nr][nc] = current.layout[r][c];
+                                nextLayout[r][c] = 0;
+                                
+                                let layoutStr = serializeLayout(nextLayout);
+                                if (!visited.has(layoutStr)) {
+                                    visited.add(layoutStr);
+                                    queue.push({ layout: nextLayout, path: current.path.concat([[r, c]]) });
+                                }
                             }
                         }
                     }
@@ -537,33 +595,35 @@
 
     async function runAutoFinder() {
         if (isAnimating || !targetCar) return;
+        activeRow = null; activeCol = null; // 自動播放時關閉手動按鈕
+        
         currentLayout = JSON.parse(JSON.stringify(savedLayout));
         stepCount = 0;
         document.getElementById('step-log').innerHTML = `<tr><td colspan="4" style="color:#95a5a6;">尚無移動數據</td></tr>`;
         
-        document.getElementById('mode-text').innerText = `⚡ 智慧尋路中... 正在計算 5x5 矩陣最佳路徑`;
+        document.getElementById('mode-text').innerText = `⚡ 智慧尋路中... 正在計算 5x5 最佳解`;
         isAnimating = true;
 
-        // 稍微延遲讓瀏覽器有時間渲染文字
         await new Promise(resolve => setTimeout(resolve, 50));
         let solution = solveParking(currentLayout, targetCar);
 
         if (!solution || solution.length === 0) {
             alert(`⚠️ 在此佈局下，${targetCar} 號車無法到達你設定的出入口位置（無解或調度過於複雜）。`);
             isAnimating = false;
-            document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車設為目標)`;
+            document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車操作運轉)`;
             renderGrid();
             return;
         }
 
         for (let i = 0; i < solution.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 600)); // 5x5 步數可能較多，稍微調快演示速度
+            await new Promise(resolve => setTimeout(resolve, 500));
+            // 由於路徑算的是當時該走哪一格座標，我們需要動態執行
             const [r, c] = solution[i];
-            moveCar(r, c, false);
+            autoMoveStep(r, c);
         }
 
         isAnimating = false;
-        document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車設為目標)`;
+        document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車操作運轉)`;
     }
 
     function resetGrid() {
@@ -573,9 +633,10 @@
         targetCar = 7;
         isEditMode = false;
         isAnimating = false;
+        activeRow = null; activeCol = null;
         document.getElementById('target-display').innerText = targetCar + " 號車";
         document.getElementById('step-log').innerHTML = `<tr><td colspan="4" style="color:#95a5a6;">尚無移動數據</td></tr>`;
-        document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車設為目標)`;
+        document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車操作運轉)`;
         document.getElementById('mode-text').className = "mode-indicator";
         document.getElementById('toggle-btn').innerText = "🛠️ 切換至：自訂佈局(編輯模式)";
         document.getElementById('grid-title').innerText = "🚗 機械車位矩陣（簡報測試中）";
