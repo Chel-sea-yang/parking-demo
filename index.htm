@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>5x5 專業型：無干擾提示與動態工時機械車位模擬系統</title>
+    <title>機械車位模擬系統</title>
     <style>
         * { box-sizing: border-box; font-family: 'Microsoft JhengHei', sans-serif; }
         body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -44,6 +44,11 @@
         .arrow-left  { left: 8px; top: 50%; transform: translateY(-50%); }
         .arrow-right { right: 8px; top: 50%; transform: translateY(-50%); }
 
+        /* 專屬駛出按鈕 (加長版) */
+        .exit-btn {
+            width: auto; padding: 0 6px; background-color: #e74c3c; border-color: #c0392b; color: white; z-index: 20;
+        }
+
         /* 調色盤工具列 (編輯模式專用) */
         .palette-toolbar { display: none; background: #fff3cd; border: 1px solid #ffe69c; padding: 10px; border-radius: 8px; margin-bottom: 15px; }
         .palette-title { font-size: 13px; font-weight: bold; color: #664d03; margin-bottom: 8px; }
@@ -76,8 +81,8 @@
 </head>
 <body>
 
-    <h1>5x5 專業型：單向限制與動態工時模擬系統</h1>
-    <div class="subtitle">出入口作為實體運轉空間，無干擾動態提示設計</div>
+    <h1>5x5 專業型：支援車輛駛離之動態工時模擬系統</h1>
+    <div class="subtitle">出入口化為實體運轉空間，到達後可點擊「駛出」完成出庫流程</div>
 
     <div class="container">
         <div class="control-panel">
@@ -241,6 +246,12 @@
         document.getElementById(`tool-${toolCode}`).classList.add('active');
     }
 
+    // 檢查目標格子是否為空位 (0) 或是沒有車輛的出入口 (-2)
+    function isSpaceEmpty(row, col) {
+        if (row < 0 || row >= 5 || col < 0 || col >= 5) return false;
+        return currentLayout[row][col] === 0 || currentLayout[row][col] === -2;
+    }
+
     function renderGrid() {
         const gridEl = document.getElementById('grid');
         gridEl.innerHTML = '';
@@ -251,7 +262,6 @@
                 const cell = document.createElement('div');
                 cell.classList.add('car-space');
                 
-                // 判斷該物理座標在原始設計圖 (savedLayout) 中是否為出入口
                 let isGatePos = false;
                 if (!isEditMode && savedLayout[r] && savedLayout[r][c] === -2) {
                     isGatePos = true;
@@ -281,7 +291,6 @@
                     if (val === -1) { cell.classList.add('wall', 'run-mode'); }
                     else if (val === 0 || val === -2) {
                         cell.classList.add('empty');
-                        // 即使車子移走變回 0，只要這格本來是出入口，就保留外觀
                         if (isGatePos || val === -2) {
                             cell.innerHTML = '<div style="color:#2ecc71; font-weight:bold; font-size:13px;">🚪 出入口</div>';
                             cell.style.border = '2px solid #2ecc71'; cell.style.backgroundColor = '#ebfbee';
@@ -295,11 +304,11 @@
                         if (constraint === 'Y') icon.innerText = "↕️"; else if (constraint === 'X') icon.innerText = "↔️";
                         cell.appendChild(icon);
                         
-                        // 當車子剛好停在出入口上時，給予視覺提示
                         if (isGatePos) {
                             cell.style.border = '3px solid #2ecc71';
                             const tag = document.createElement('div');
-                            tag.style = "font-size:11px; color:#fff; background:#2ecc71; padding:2px 4px; border-radius:4px; position:absolute; bottom:4px;";
+                            /* 修正：加入 pointer-events: none，防止標籤擋住向下箭頭的點擊 */
+                            tag.style = "font-size:11px; color:#fff; background:#2ecc71; padding:2px 4px; border-radius:4px; position:absolute; bottom:4px; pointer-events:none;";
                             tag.innerText = "📍在出入口";
                             cell.appendChild(tag);
                         }
@@ -314,17 +323,38 @@
 
                         if (r === activeRow && c === activeCol && !isAnimating) {
                             cell.style.boxShadow = "0 0 0 4px #f1c40f";
+                            
+                            // 產生正常的上下左右移動箭頭
                             if (constraint === 'ANY' || constraint === 'Y') {
-                                if (r-1 >= 0 && (currentLayout[r-1][c]===0 || currentLayout[r-1][c]===-2)) 
-                                    createArrow(cell, '▲', 'arrow-up', () => manualMove(r, c, -1, 0, 'Y'));
-                                if (r+1 < 5 && (currentLayout[r+1][c]===0 || currentLayout[r+1][c]===-2)) 
-                                    createArrow(cell, '▼', 'arrow-down', () => manualMove(r, c, 1, 0, 'Y'));
+                                if (isSpaceEmpty(r-1, c)) createArrow(cell, '▲', 'arrow-up', () => manualMove(r, c, -1, 0, 'Y'));
+                                if (isSpaceEmpty(r+1, c)) createArrow(cell, '▼', 'arrow-down', () => manualMove(r, c, 1, 0, 'Y'));
                             }
                             if (constraint === 'ANY' || constraint === 'X') {
-                                if (c-1 >= 0 && (currentLayout[r][c-1]===0 || currentLayout[r][c-1]===-2)) 
-                                    createArrow(cell, '◀', 'arrow-left', () => manualMove(r, c, 0, -1, 'X'));
-                                if (c+1 < 5 && (currentLayout[r][c+1]===0 || currentLayout[r][c+1]===-2)) 
-                                    createArrow(cell, '▶', 'arrow-right', () => manualMove(r, c, 0, 1, 'X'));
+                                if (isSpaceEmpty(r, c-1)) createArrow(cell, '◀', 'arrow-left', () => manualMove(r, c, 0, -1, 'X'));
+                                if (isSpaceEmpty(r, c+1)) createArrow(cell, '▶', 'arrow-right', () => manualMove(r, c, 0, 1, 'X'));
+                            }
+
+                            // 🚨 新增：如果車子在出入口，給予專屬的「駛出」按鈕！
+                            if (isGatePos) {
+                                let exitClass = 'arrow-down'; let exitText = '▼ 駛出';
+                                // 判斷出入口在哪個邊緣，箭頭就朝哪邊指
+                                if (r === 4) { exitClass = 'arrow-down'; exitText = '▼ 駛出'; }
+                                else if (r === 0) { exitClass = 'arrow-up'; exitText = '▲ 駛出'; }
+                                else if (c === 0) { exitClass = 'arrow-left'; exitText = '◀ 駛出'; }
+                                else if (c === 4) { exitClass = 'arrow-right'; exitText = '▶ 駛出'; }
+                                
+                                const exitBtn = document.createElement('div');
+                                exitBtn.className = `arrow-btn exit-btn ${exitClass}`;
+                                exitBtn.innerText = exitText;
+                                exitBtn.onclick = (e) => {
+                                    e.stopPropagation();
+                                    currentLayout[r][c] = 0; // 車子駛離盤面，恢復為空位
+                                    activeRow = null; activeCol = null;
+                                    logStep(val, '駛離', 0);
+                                    renderGrid();
+                                    checkWin();
+                                };
+                                cell.appendChild(exitBtn);
                             }
                         }
                     }
@@ -344,7 +374,7 @@
         const nr = r + dr; const nc = c + dc; const carNum = currentLayout[r][c];
         
         currentLayout[nr][nc] = carNum; 
-        currentLayout[r][c] = 0; // 車子離開後，該位置變為純淨的空格0 (出入口外觀會由 isGatePos 自動補上)
+        currentLayout[r][c] = 0; 
         
         activeRow = nr; activeCol = nc; stepCount++;
         
@@ -436,26 +466,39 @@
         const tbody = document.getElementById('step-log');
         if (stepCount === 1) tbody.innerHTML = ''; 
         const row = document.createElement('tr');
-        const xText = axis === 'X' ? (val > 0 ? `+1 (右移)` : `-1 (左移)`) : '0';
-        const yText = axis === 'Y' ? (val > 0 ? `+1 (下移)` : `-1 (上移)`) : '0';
-        row.innerHTML = `<td>${stepCount}</td><td style="font-weight:bold; color:#2980b9;">${carNum} 號車</td><td>${xText}</td><td>${yText}</td>`;
+        
+        if (axis === '駛離') {
+            row.innerHTML = `<td>${stepCount}</td><td style="font-weight:bold; color:#e74c3c;">${carNum} 號車</td><td colspan="2" style="color:#2ecc71; font-weight:bold;">🚀 已駛出系統</td>`;
+        } else {
+            const xText = axis === 'X' ? (val > 0 ? `+1 (右移)` : `-1 (左移)`) : '0';
+            const yText = axis === 'Y' ? (val > 0 ? `+1 (下移)` : `-1 (上移)`) : '0';
+            row.innerHTML = `<td>${stepCount}</td><td style="font-weight:bold; color:#2980b9;">${carNum} 號車</td><td>${xText}</td><td>${yText}</td>`;
+        }
         tbody.appendChild(row); tbody.parentElement.parentElement.scrollTop = tbody.parentElement.parentElement.scrollHeight;
     }
 
-    // 檢查勝利與動態UI回饋 (不彈出視窗)
     function checkWin() {
         let gatePos = findGateCoordinates(savedLayout);
         const modeText = document.getElementById('mode-text');
         
+        // 如果目標車到達出入口
         if (gatePos && currentLayout[gatePos.r][gatePos.c] === targetCar) {
             const finalTime = document.getElementById('total-time-sum').innerText;
-            // 取代原本的 alert，改為在狀態列顯示綠色的成功資訊
             modeText.innerText = `🎉 成功出庫！目標車已到達出入口 (本次總耗時 ${finalTime} 秒)`;
             modeText.className = "mode-indicator success";
-        } else if (modeText.classList.contains('success')) {
-            // 若車子又離開了出入口，則狀態列自動變回一般顯示，不留痕跡
-            modeText.innerText = "🎯 目前模式：防呆運轉/簡報測試";
-            modeText.className = "mode-indicator";
+        } 
+        // 或是目標車已經駛離系統 (陣列中找不到它)
+        else if (targetCar) {
+            let carStillInSystem = false;
+            for(let r=0; r<5; r++) for(let c=0; c<5; c++) if (currentLayout[r][c] === targetCar) carStillInSystem = true;
+            
+            if (!carStillInSystem) {
+                modeText.innerText = `🚀 出庫完成！目標車已駛離系統`;
+                modeText.className = "mode-indicator success";
+            } else if (modeText.classList.contains('success')) {
+                modeText.innerText = "🎯 目前模式：防呆運轉/簡報測試";
+                modeText.className = "mode-indicator";
+            }
         }
     }
 
