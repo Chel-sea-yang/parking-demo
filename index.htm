@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>5x5 專業型：定點機構限制與動態工時機械車位模擬系統</title>
+    <title>🧡保昇機電🧡🧡機械車位模擬系統</title>
     <style>
         * { box-sizing: border-box; font-family: 'Microsoft JhengHei', sans-serif; }
         body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -83,8 +83,8 @@
 </head>
 <body>
 
-    <h1>5x5 專業型：定點傳動機構限制與動態工時模擬系統</h1>
-    <div class="subtitle">依據「格子座標機構」決定運轉方向，解放車板流動性，模擬真實拼圖調度</div>
+    <h1>🧡保昇機電🧡🧡機械車位模擬系統</h1>
+    <div class="subtitle">模擬棋盤式車位調度</div>
 
     <div class="container">
         <div class="control-panel">
@@ -94,8 +94,8 @@
                 <div class="palette-title">🖌️ 請選擇要在右側畫布配置的「傳動機構」：</div>
                 <div class="palette-options">
                     <button class="tool-btn active" id="tool-1000" onclick="selectTool(1000)">🚗 雙向機構 (X與Y)</button>
-                    <button class="tool-btn" id="tool-2000" onclick="selectTool(2000)">↔️ 橫移機構 (僅限X)</button>
-                    <button class="tool-btn" id="tool-3000" onclick="selectTool(3000)">↕️ 升降機構 (僅限Y)</button>
+                    <button class="tool-btn" id="tool-2000" onclick="selectTool(2000)">↔️ 縱送機構 (僅限Y)</button>
+                    <button class="tool-btn" id="tool-3000" onclick="selectTool(3000)">↕️ 橫移機構 (僅限X)</button>
                     <button class="tool-btn" id="tool-0" onclick="selectTool(0)">⬜ 運轉空格</button>
                     <button class="tool-btn" id="tool--1" onclick="selectTool(-1)">🧱 結構大柱/牆壁</button>
                     <button class="tool-btn" id="tool--2" onclick="selectTool(-2)">🚪 系統出入口 (限1個)</button>
@@ -127,7 +127,7 @@
             <div class="excel-box" style="margin-top: 10px;">
                 <h4 style="margin: 0 0 5px 0; color: #15803d;">📊 本次出庫運轉統計看板</h4>
                 <table class="excel-table">
-                    <thead><tr><th>數據類別</th><th>X軸橫移</th><th>舉昇動作</th><th>Y軸升降</th></tr></thead>
+                    <thead><tr><th>數據類別</th><th>Y軸縱送</th><th>舉昇動作</th><th>X軸橫移</th></tr></thead>
                     <tbody>
                         <tr>
                             <td style="font-weight:bold;">運轉次數</td>
@@ -160,7 +160,7 @@
             <div class="parking-grid" id="grid"></div>
             <div style="margin-top: 10px; max-height: 120px; overflow-y: auto; width: 100%;">
                 <table class="step-table">
-                    <thead><tr><th>步驟</th><th>車位</th><th>X軸橫移</th><th>Y軸升降</th></tr></thead>
+                    <thead><tr><th>步驟</th><th>車位</th><th>Y軸縱送</th><th>X軸橫移</th></tr></thead>
                     <tbody id="step-log"><tr><td colspan="4" style="color:#95a5a6;">尚無移動數據</td></tr></tbody>
                 </table>
             </div>
@@ -294,8 +294,8 @@
                     else { 
                         cell.innerText = `🚗 載車盤`; 
                         let icon = document.createElement('div'); icon.className = 'constraint-icon';
-                        if (editVal >= 3000) icon.innerText = "↕️ 升降機構";
-                        else if (editVal >= 2000) icon.innerText = "↔️ 橫移機構";
+                        if (editVal >= 3000) icon.innerText = "↕️ 橫移機構";
+                        else if (editVal >= 2000) icon.innerText = "↔️ 縱送機構";
                         else icon.innerText = "✥ 雙向機構";
                         cell.appendChild(icon);
                     }
