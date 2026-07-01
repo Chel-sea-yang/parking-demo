@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>全自訂佈局與出入口智慧尋路機械車位模擬系統</title>
+    <title>5x5 全自訂智慧機械車位模擬系統</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,7 +27,7 @@
         .container {
             display: flex;
             gap: 30px;
-            max-width: 1100px;
+            max-width: 1200px;
             width: 100%;
         }
         /* 控制面板 */
@@ -40,7 +40,7 @@
         }
         /* 車位棋盤區域 */
         .simulation-area {
-            flex: 1.3;
+            flex: 1.4;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -51,13 +51,13 @@
         }
         
         /* ========================================== */
-        /* CRITICAL FIX: 確保車位格子顯示的網格核心樣式  */
+        /* 核心修改：升級為 5 欄 × 5 列的網格規格        */
         /* ========================================== */
         .parking-grid {
             display: grid;
-            grid-template-columns: repeat(4, 120px); /* 4 欄 */
-            grid-template-rows: repeat(3, 100px);    /* 3 列 */
-            gap: 10px;
+            grid-template-columns: repeat(5, 110px); /* 5 欄，微調寬度符合大螢幕 */
+            grid-template-rows: repeat(5, 90px);     /* 5 列，微調高度 */
+            gap: 8px;
             background: #bdc3c7;
             padding: 15px;
             border-radius: 8px;
@@ -73,13 +73,13 @@
             justify-content: center;
             align-items: center;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2);
             user-select: none;
-            width: 120px;
-            height: 100px;
+            width: 110px;
+            height: 90px;
         }
         .car-space:hover {
             transform: scale(1.02);
@@ -130,7 +130,7 @@
         }
         .step-table th, .step-table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             text-align: center;
         }
         .step-table th {
@@ -190,8 +190,8 @@
 </head>
 <body>
 
-    <h1>全自訂基地與出入口 機械車位模擬系統</h1>
-    <div class="subtitle">支援自由指定「出入口」、「車位」、「空格」與「柱子」之全能解說工具</div>
+    <h1>5x5 智慧路徑與自主佈局 機械車位模擬系統</h1>
+    <div class="subtitle">升級型大容量矩陣，支援自由設定 25 格空間之極致簡報工具</div>
 
     <div class="container">
         <div class="control-panel">
@@ -212,7 +212,7 @@
             <button onclick="resetGrid()">🔄 重置回初始狀態</button>
             
             <h3 style="margin-top:20px;">📋 搬移指令序列</h3>
-            <div style="max-height: 180px; overflow-y: auto;">
+            <div style="max-height: 220px; overflow-y: auto;">
                 <table class="step-table">
                     <thead>
                         <tr>
@@ -236,31 +236,37 @@
             <div class="parking-grid" id="grid">
                 </div>
             <div id="tip-text" style="margin-top: 15px; color: #7f8c8d; font-size: 14px; text-align: center;">
-                ※ 點擊任何車位可將其設為「目標車」，隨後點擊智慧尋路即可自動出庫。
+                ※ 點擊任何非目標車位可切換目標；再次點擊目標車（或非卡死車位）即可<b>手動滑動格子</b>。
             </div>
         </div>
     </div>
 
 <script>
-    // 初始配置：-1=牆壁, 0=空格, -2=出入口, 正數=車位
+    // ========================================== 
+    // 核心修改：預設 5x5 的矩陣佈局
+    // 1~18代表車位, 0=空格, -1=牆壁, -2=出入口
+    // ========================================== 
     const defaultLayout = [
-        [1,  2,  3, -1],
-        [-2, 0,  5,  6], 
-        [7,  8,  9, -1]
+        [1,  2,  3,  4,  -1],
+        [5,  6,  7,  8,  -1],
+        [9,  10, 11, 12, 0],
+        [13, 14, 15, 16, 0],
+        [-2, 17, 18, 0,  -1] // 預設左下角為出入口，並留有多個空格方便運轉
     ];
     
     let savedLayout = JSON.parse(JSON.stringify(defaultLayout));
     let currentLayout = JSON.parse(JSON.stringify(defaultLayout));
     
     let stepCount = 0;
-    let targetCar = 5; 
+    let targetCar = 7; // 預設目標車改為 7 號車
     let isEditMode = false; 
     let isAnimating = false; 
 
+    // 重新排序並把場上殘留車子順序編號 (1, 2, 3...)
     function autoReconstructNumbers() {
         let counter = 1;
-        for (let r = 0; r < 3; r++) {
-            for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
                 if (currentLayout[r][c] > 0) {
                     currentLayout[r][c] = counter++;
                 }
@@ -270,8 +276,8 @@
     }
 
     function findGateCoordinates(layout) {
-        for (let r = 0; r < 3; r++) {
-            for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
                 if (layout[r][c] === -2) return { r, c };
             }
         }
@@ -291,8 +297,8 @@
         const gridEl = document.getElementById('grid');
         gridEl.innerHTML = '';
         
-        for (let r = 0; r < 3; r++) {
-            for (let c = 0; c < 4; c++) {
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
                 const val = currentLayout[r][c];
                 const cell = document.createElement('div');
                 cell.classList.add('car-space');
@@ -315,8 +321,8 @@
                         if (val > 0) currentLayout[r][c] = 0;
                         else if (val === 0) currentLayout[r][c] = -1;
                         else if (val === -1) {
-                            for(let i=0; i<3; i++) {
-                                for(let j=0; j<4; j++) { if(currentLayout[i][j] === -2) currentLayout[i][j] = 0; }
+                            for(let i=0; i<5; i++) {
+                                for(let j=0; j<5; j++) { if(currentLayout[i][j] === -2) currentLayout[i][j] = 0; }
                             }
                             currentLayout[r][c] = -2;
                         }
@@ -331,7 +337,7 @@
                     } else if (val === 0 || val === -2) {
                         cell.classList.add('empty');
                         if (val === -2) {
-                            cell.innerHTML = '<div style="color:#2ecc71; font-weight:bold; font-size:14px;">🚪 出入口</div>';
+                            cell.innerHTML = '<div style="color:#2ecc71; font-weight:bold; font-size:13px;">🚪 出入口</div>';
                             cell.style.border = '2px solid #2ecc71';
                             cell.style.backgroundColor = '#ebfbee';
                         } else {
@@ -376,7 +382,7 @@
             modeText.innerText = "🛠️ 目前模式：自訂佈局 (點擊方格切換狀態)";
             modeText.className = "mode-indicator edit";
             toggleBtn.innerText = "💾 儲存配置並返回測試";
-            gridTitle.innerText = "🛠️ 現場規格配置編輯器";
+            gridTitle.innerText = "🛠️ 5x5 現場規格配置編輯器";
             tipText.innerText = "※ 點擊格子循環切換：[🚗車位 ➡️ ⬜空位 ➡️ 🧱牆壁 ➡️ 🚪出入口(限一個)]";
             finderBtn.style.display = "none";
             
@@ -401,8 +407,8 @@
             autoReconstructNumbers();
             
             targetCar = null;
-            for(let r=0; r<3; r++) {
-                for(let c=0; c<4; c++) {
+            for(let r=0; r<5; r++) {
+                for(let c=0; c<5; c++) {
                     if(currentLayout[r][c] > 0) { targetCar = currentLayout[r][c]; break; }
                 }
                 if(targetCar) break;
@@ -413,8 +419,10 @@
         }
     }
 
+    // 基礎位移核心：搜尋範圍擴大至 5x5 的邊界
     function executeMove(layout, r, c) {
-        for (let targetCol = 0; targetCol < 4; targetCol++) {
+        // 1. 橫移檢查 (0~4)
+        for (let targetCol = 0; targetCol < 5; targetCol++) {
             let targetVal = layout[r][targetCol];
             if (targetVal === 0 || targetVal === -2) { 
                 let hasObstacle = false;
@@ -437,7 +445,8 @@
                 }
             }
         }
-        for (let targetRow = 0; targetRow < 3; targetRow++) {
+        // 2. 升降檢查 (0~4)
+        for (let targetRow = 0; targetRow < 5; targetRow++) {
             let targetVal = layout[targetRow][c];
             if ((targetVal === 0 || targetVal === -2) && targetVal !== -1) {
                 let nextLayout = JSON.parse(JSON.stringify(layout));
@@ -485,6 +494,7 @@
 
     function serializeLayout(layout) { return layout.map(row => row.join(',')).join('|'); }
 
+    // BFS 智慧搜尋演算法 (完全支援 5x5 矩陣)
     function solveParking(startLayout, target) {
         let gatePos = findGateCoordinates(savedLayout);
         if (!gatePos) return null;
@@ -493,15 +503,22 @@
         let visited = new Set();
         visited.add(serializeLayout(startLayout));
 
+        // 限制搜尋最大節點數，避免 5x5 完全開放空間計算過久
+        let nodeCount = 0;
+        const MAX_NODES = 30000; 
+
         while (queue.length > 0) {
             let current = queue.shift();
+            nodeCount++;
             
             if (current.layout[gatePos.r][gatePos.c] === target) {
                 return current.path;
             }
 
-            for (let r = 0; r < 3; r++) {
-                for (let c = 0; c < 4; c++) {
+            if (nodeCount > MAX_NODES) return null; // 防止極端死鎖卡頓
+
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
                     if (current.layout[r][c] > 0) {
                         let res = executeMove(current.layout, r, c);
                         if (res.success) {
@@ -524,13 +541,15 @@
         stepCount = 0;
         document.getElementById('step-log').innerHTML = `<tr><td colspan="4" style="color:#95a5a6;">尚無移動數據</td></tr>`;
         
-        document.getElementById('mode-text').innerText = `⚡ 智慧尋路中... 正在計算到自訂出入口的最佳路徑`;
+        document.getElementById('mode-text').innerText = `⚡ 智慧尋路中... 正在計算 5x5 矩陣最佳路徑`;
         isAnimating = true;
 
+        // 稍微延遲讓瀏覽器有時間渲染文字
+        await new Promise(resolve => setTimeout(resolve, 50));
         let solution = solveParking(currentLayout, targetCar);
 
         if (!solution || solution.length === 0) {
-            alert(`⚠️ 在此佈局下，${targetCar} 號車無法到達你設定的出入口位置（路徑被牆壁卡死或無解）。`);
+            alert(`⚠️ 在此佈局下，${targetCar} 號車無法到達你設定的出入口位置（無解或調度過於複雜）。`);
             isAnimating = false;
             document.getElementById('mode-text').innerText = `🎯 目前模式：簡報測試 (點車設為目標)`;
             renderGrid();
@@ -538,7 +557,7 @@
         }
 
         for (let i = 0; i < solution.length; i++) {
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await new Promise(resolve => setTimeout(resolve, 600)); // 5x5 步數可能較多，稍微調快演示速度
             const [r, c] = solution[i];
             moveCar(r, c, false);
         }
@@ -551,7 +570,7 @@
         savedLayout = JSON.parse(JSON.stringify(defaultLayout));
         currentLayout = JSON.parse(JSON.stringify(defaultLayout));
         stepCount = 0;
-        targetCar = 5;
+        targetCar = 7;
         isEditMode = false;
         isAnimating = false;
         document.getElementById('target-display').innerText = targetCar + " 號車";
