@@ -140,14 +140,15 @@
             font-weight: bold;
         }
         .arrow-btn:hover {
-            background: #f39c12;
-            color: white;
-            transform: scale(1.1);
+           background: #d35400; /* 滑鼠移過去時，顏色由黃變深橘色 */
+    color: white;        /* 文字變白色 */
+    border-color: #a04000;
+    /* 拿掉了原本的 transform: scale(1.1); 確保絕對不位移 */
         }
-        .arrow-up    { top: 4px; left: 50%; transform: translateX(-50%); }
-        .arrow-down  { bottom: 4px; left: 50%; transform: translateX(-50%); }
-        .arrow-left  { left: 4px; top: 50%; transform: translateY(-50%); }
-        .arrow-right { right: 4px; top: 50%; transform: translateY(-50%); }
+        .arrow-up    { top: 8px; left: 50%; transform: translateX(-50%); }
+        .arrow-down  { bottom: 8px; left: 50%; transform: translateX(-50%); }
+        .arrow-left  { left: 8px; top: 50%; transform: translateY(-50%); }
+        .arrow-right { right: 8px; top: 50%; transform: translateY(-50%); }
 
         /* 表格與按鈕樣式 */
         .step-table {
