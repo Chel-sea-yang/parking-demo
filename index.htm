@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>機械車位模擬系統</title>
+    <title>5x5 專業型：無干擾提示與動態工時機械車位模擬系統</title>
     <style>
         * { box-sizing: border-box; font-family: 'Microsoft JhengHei', sans-serif; }
         body { background-color: #f4f6f9; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
@@ -31,7 +31,6 @@
         .car-space.empty { background: #ecf0f1; border: 2px dashed #95a5a6; box-shadow: none; color: #7f8c8d; }
         .car-space.wall { background: #95a5a6; color: #d5dbdb; border: 2px solid #7f8c8d; box-shadow: none; }
         .car-space.wall.run-mode { opacity: 0; cursor: default; }
-        .car-space.gate { color: #2ecc71; font-weight: bold; font-size: 14px; border: 2px solid #2ecc71; background-color: #ebfbee; box-shadow: none; }
         .car-space.target { background: #e74c3c; }
 
         /* 手動操控箭頭 */
@@ -66,8 +65,10 @@
         .status-box { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #e74c3c; }
         .excel-box { background: #f0fdf4; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #16a34a; }
         
-        .mode-indicator { padding: 8px; background: #e8f4fd; border-radius: 6px; margin-bottom: 10px; font-size: 14px; color: #2b6cb0; text-align: center; font-weight: bold; border: 1px solid #bee3f8; }
+        /* 狀態列視覺反饋 */
+        .mode-indicator { padding: 8px; background: #e8f4fd; border-radius: 6px; margin-bottom: 10px; font-size: 14px; color: #2b6cb0; text-align: center; font-weight: bold; border: 1px solid #bee3f8; transition: all 0.3s ease;}
         .mode-indicator.edit { background: #feebc8; color: #dd6b20; border: 1px solid #fbd38d; }
+        .mode-indicator.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         
         button.action-btn { width: 100%; padding: 10px; margin: 3px 0; background: #2c3e50; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; font-weight: bold; }
         button.action-btn:hover { background: #34495e; }
@@ -76,18 +77,18 @@
 <body>
 
     <h1>5x5 專業型：單向限制與動態工時模擬系統</h1>
-    <div class="subtitle">導入真實載車盤方向限制 (橫移/升降)，優化防呆邏輯與極速運算效能</div>
+    <div class="subtitle">出入口作為實體運轉空間，無干擾動態提示設計</div>
 
     <div class="container">
         <div class="control-panel">
-            <div class="mode-indicator" id="mode-text">🎯 目前模式：自主運轉/簡報測試</div>
+            <div class="mode-indicator" id="mode-text">🎯 目前模式：防呆運轉/簡報測試</div>
 
             <div class="palette-toolbar" id="palette">
                 <div class="palette-title">🖌️ 請選擇要在右側畫布塗上的物件：</div>
                 <div class="palette-options">
                     <button class="tool-btn active" id="tool-1000" onclick="selectTool(1000)">🚗 雙向車位 (X與Y)</button>
                     <button class="tool-btn" id="tool-2000" onclick="selectTool(2000)">↔️ 橫移車位 (僅限X)</button>
-                    <button class="tool-btn" id="tool-3000" onclick="selectTool(3000)">↕️ 縱走車位 (僅限Y)</button>
+                    <button class="tool-btn" id="tool-3000" onclick="selectTool(3000)">↕️ 升降車位 (僅限Y)</button>
                     <button class="tool-btn" id="tool-0" onclick="selectTool(0)">⬜ 運轉空位</button>
                     <button class="tool-btn" id="tool--1" onclick="selectTool(-1)">🧱 結構大柱/牆壁</button>
                     <button class="tool-btn" id="tool--2" onclick="selectTool(-2)">🚪 系統出入口 (限1個)</button>
@@ -160,27 +161,22 @@
     </div>
 
 <script>
-    // 內部代碼定義：
-    // -1: 牆壁, 0: 空位, -2: 出入口
-    // 1000系列: 雙向車位, 2000系列: 橫移(X)車位, 3000系列: 橫移(Y)車位
     const defaultRawLayout = [
-        [3000, 3000, 3000, 3000, -1],    
+        [3000, 3000, 3000, 3000, -1],
         [3000, 3000, 3000, 3000, -1],   
-        [1000, 1000, 1000, 1000, 0],     
-        [2000, 2000, 2000, 2000, 0],    
+        [1000, 1000, 1000, 1000, 0],
+        [2000, 2000, 2000, 2000, 0],
         [-2,   2000, 2000, 0,    -1] 
     ];
     
     let savedLayout = JSON.parse(JSON.stringify(defaultRawLayout));
     let currentLayout = JSON.parse(JSON.stringify(defaultRawLayout));
-    
-    // 儲存每台車的方向限制 { carId: 'ANY' | 'X' | 'Y' }
     let carConstraints = {}; 
 
     let stepCount = 0; let targetCar = null; 
     let isEditMode = false; let isAnimating = false; 
     let activeRow = null; let activeCol = null;
-    let currentTool = 1000; // 預設畫筆為雙向車位
+    let currentTool = 1000; 
 
     let statXCount = 0; let statYCount = 0; let statLiftCount = 0;
     let secPerXGrid = 7.65; let secPerYGrid = 16.2;
@@ -216,20 +212,17 @@
         document.getElementById('total-time-sum').innerText = finalSum.toFixed(1);
     }
 
-    // 將 1000/2000/3000 的代碼正式轉換為 1, 2, 3... 的真實車牌，並記錄限制
     function compileLayoutAndAssignIds() {
         let counter = 1;
         carConstraints = {};
         for (let r = 0; r < 5; r++) {
             for (let c = 0; c < 5; c++) {
                 let val = currentLayout[r][c];
-                if (val >= 1000) { // 這是一台車
+                if (val >= 1000) {
                     let realId = counter++;
-                    // 根據代碼分類限制
                     if (val >= 3000) carConstraints[realId] = 'Y';
                     else if (val >= 2000) carConstraints[realId] = 'X';
                     else carConstraints[realId] = 'ANY';
-                    
                     currentLayout[r][c] = realId;
                 }
             }
@@ -242,7 +235,6 @@
         return null;
     }
 
-    // 調色盤工具選擇
     function selectTool(toolCode) {
         currentTool = toolCode;
         document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
@@ -259,21 +251,25 @@
                 const cell = document.createElement('div');
                 cell.classList.add('car-space');
                 
+                // 判斷該物理座標在原始設計圖 (savedLayout) 中是否為出入口
+                let isGatePos = false;
+                if (!isEditMode && savedLayout[r] && savedLayout[r][c] === -2) {
+                    isGatePos = true;
+                }
+                
                 if (isEditMode) {
                     if (val === -1) { cell.classList.add('wall', 'edit-mode'); cell.innerText = "🧱 牆壁"; }
                     else if (val === 0) { cell.classList.add('empty'); cell.innerText = "⬜ 空位"; }
-                    else if (val === -2) { cell.classList.add('gate'); cell.innerText = "🚪 出入口"; }
+                    else if (val === -2) { cell.style.cssText = 'color:#2ecc71; font-weight:bold; border:2px solid #2ecc71; background-color:#ebfbee;'; cell.innerText = "🚪 出入口"; }
                     else { 
                         cell.innerText = `🚗 車位`; 
-                        let icon = document.createElement('div');
-                        icon.className = 'constraint-icon';
-                        if (val >= 3000) icon.innerText = "↕️ 僅縱送";
+                        let icon = document.createElement('div'); icon.className = 'constraint-icon';
+                        if (val >= 3000) icon.innerText = "↕️ 僅升降";
                         else if (val >= 2000) icon.innerText = "↔️ 僅橫移";
                         else icon.innerText = "✥ 雙向";
                         cell.appendChild(icon);
                     }
                     
-                    // 使用調色盤畫筆直接上色
                     cell.onclick = () => {
                         if (currentTool === -2) {
                             for(let i=0; i<5; i++) for(let j=0; j<5; j++) if(currentLayout[i][j]===-2) currentLayout[i][j]=0;
@@ -285,7 +281,8 @@
                     if (val === -1) { cell.classList.add('wall', 'run-mode'); }
                     else if (val === 0 || val === -2) {
                         cell.classList.add('empty');
-                        if (val === -2) {
+                        // 即使車子移走變回 0，只要這格本來是出入口，就保留外觀
+                        if (isGatePos || val === -2) {
                             cell.innerHTML = '<div style="color:#2ecc71; font-weight:bold; font-size:13px;">🚪 出入口</div>';
                             cell.style.border = '2px solid #2ecc71'; cell.style.backgroundColor = '#ebfbee';
                         } else { cell.innerHTML = '<div>(空位)</div>'; }
@@ -293,14 +290,20 @@
                         cell.innerText = val + " 號車";
                         if (val === targetCar) { cell.classList.add('target'); cell.innerText = `🌟 ${val}號車`; }
                         
-                        // 顯示車位的真實限制屬性
                         let constraint = carConstraints[val];
-                        let icon = document.createElement('div');
-                        icon.className = 'constraint-icon';
-                        if (constraint === 'Y') icon.innerText = "↕️";
-                        else if (constraint === 'X') icon.innerText = "↔️";
+                        let icon = document.createElement('div'); icon.className = 'constraint-icon';
+                        if (constraint === 'Y') icon.innerText = "↕️"; else if (constraint === 'X') icon.innerText = "↔️";
                         cell.appendChild(icon);
                         
+                        // 當車子剛好停在出入口上時，給予視覺提示
+                        if (isGatePos) {
+                            cell.style.border = '3px solid #2ecc71';
+                            const tag = document.createElement('div');
+                            tag.style = "font-size:11px; color:#fff; background:#2ecc71; padding:2px 4px; border-radius:4px; position:absolute; bottom:4px;";
+                            tag.innerText = "📍在出入口";
+                            cell.appendChild(tag);
+                        }
+
                         cell.onclick = () => {
                             if (isAnimating) return;
                             if (val !== targetCar && activeRow !== r && activeCol !== c) {
@@ -309,18 +312,14 @@
                             activeRow = r; activeCol = c; renderGrid();
                         };
 
-                        // 生成方向箭頭：加入【限制防呆】判斷
                         if (r === activeRow && c === activeCol && !isAnimating) {
                             cell.style.boxShadow = "0 0 0 4px #f1c40f";
-                            
-                            // Y軸 (上下) 判斷：必須是 ANY 或 Y
                             if (constraint === 'ANY' || constraint === 'Y') {
                                 if (r-1 >= 0 && (currentLayout[r-1][c]===0 || currentLayout[r-1][c]===-2)) 
                                     createArrow(cell, '▲', 'arrow-up', () => manualMove(r, c, -1, 0, 'Y'));
                                 if (r+1 < 5 && (currentLayout[r+1][c]===0 || currentLayout[r+1][c]===-2)) 
                                     createArrow(cell, '▼', 'arrow-down', () => manualMove(r, c, 1, 0, 'Y'));
                             }
-                            // X軸 (左右) 判斷：必須是 ANY 或 X
                             if (constraint === 'ANY' || constraint === 'X') {
                                 if (c-1 >= 0 && (currentLayout[r][c-1]===0 || currentLayout[r][c-1]===-2)) 
                                     createArrow(cell, '◀', 'arrow-left', () => manualMove(r, c, 0, -1, 'X'));
@@ -343,7 +342,10 @@
 
     function manualMove(r, c, dr, dc, axis) {
         const nr = r + dr; const nc = c + dc; const carNum = currentLayout[r][c];
-        currentLayout[nr][nc] = carNum; currentLayout[r][c] = 0;
+        
+        currentLayout[nr][nc] = carNum; 
+        currentLayout[r][c] = 0; // 車子離開後，該位置變為純淨的空格0 (出入口外觀會由 isGatePos 自動補上)
+        
         activeRow = nr; activeCol = nc; stepCount++;
         
         if (axis === 'X') statXCount++; else if (axis === 'Y') statYCount++;
@@ -369,7 +371,6 @@
             palette.style.display = "block";
             finderBtn.style.display = "none";
             
-            // 將數字還原成編輯代碼，方便繼續塗改
             for(let r=0; r<5; r++){
                 for(let c=0; c<5; c++){
                     let val = currentLayout[r][c];
@@ -390,7 +391,7 @@
             palette.style.display = "none";
             finderBtn.style.display = "block";
             
-            compileLayoutAndAssignIds(); // 重新編號並套用方向限制！
+            compileLayoutAndAssignIds(); 
             
             targetCar = null;
             for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(currentLayout[r][c] > 0) { targetCar = currentLayout[r][c]; break; }
@@ -399,12 +400,10 @@
         }
     }
 
-    // 加入方向限制檢查的位移核心
     function executeMove(layout, r, c) {
         const carNum = layout[r][c];
         const constraint = carConstraints[carNum] || 'ANY';
         
-        // 只過濾符合限制的方向
         let allowedDirs = [];
         if (constraint === 'ANY' || constraint === 'Y') allowedDirs.push({dr:-1, dc:0, axis:'Y'}, {dr:1, dc:0, axis:'Y'});
         if (constraint === 'ANY' || constraint === 'X') allowedDirs.push({dr:0, dc:-1, axis:'X'}, {dr:0, dc:1, axis:'X'});
@@ -443,17 +442,25 @@
         tbody.appendChild(row); tbody.parentElement.parentElement.scrollTop = tbody.parentElement.parentElement.scrollHeight;
     }
 
+    // 檢查勝利與動態UI回饋 (不彈出視窗)
     function checkWin() {
         let gatePos = findGateCoordinates(savedLayout);
+        const modeText = document.getElementById('mode-text');
+        
         if (gatePos && currentLayout[gatePos.r][gatePos.c] === targetCar) {
             const finalTime = document.getElementById('total-time-sum').innerText;
-            setTimeout(() => { alert(`🎉 成功出庫！${targetCar}號車已到達出入口。\n📊 本次總耗時：${finalTime} 秒。`); }, 300);
+            // 取代原本的 alert，改為在狀態列顯示綠色的成功資訊
+            modeText.innerText = `🎉 成功出庫！目標車已到達出入口 (本次總耗時 ${finalTime} 秒)`;
+            modeText.className = "mode-indicator success";
+        } else if (modeText.classList.contains('success')) {
+            // 若車子又離開了出入口，則狀態列自動變回一般顯示，不留痕跡
+            modeText.innerText = "🎯 目前模式：防呆運轉/簡報測試";
+            modeText.className = "mode-indicator";
         }
     }
 
     function serializeLayout(layout) { return layout.map(row => row.join(',')).join('|'); }
 
-    // BFS 演算法 (因為加入了單向限制，樹枝大幅修剪，運算極速！)
     async function solveParking(startLayout, target) {
         let gatePos = findGateCoordinates(savedLayout); if (!gatePos) return null;
         let queue = [{ layout: startLayout, path: [] }];
@@ -464,7 +471,6 @@
             let current = queue.shift(); nodeCount++;
             if (current.layout[gatePos.r][gatePos.c] === target) return current.path;
             
-            // 避免完全無解時卡死 UI，每計算 1000 次釋放一下主執行緒
             if (nodeCount % 1000 === 0) {
                 document.getElementById('mode-text').innerText = `⚡ 系統極速運算中... (已過濾 ${nodeCount} 種防呆路徑)`;
                 await new Promise(r => setTimeout(r, 0));
@@ -505,6 +511,7 @@
         activeRow = null; activeCol = null;
         currentLayout = JSON.parse(JSON.stringify(savedLayout));
         resetCounters();
+        document.getElementById('mode-text').className = "mode-indicator";
         
         isAnimating = true;
 
@@ -522,7 +529,6 @@
             const [r, c] = solution[i]; autoMoveStep(r, c);
         }
         isAnimating = false;
-        document.getElementById('mode-text').innerText = `🎯 目前模式：防呆運轉/簡報測試`;
     }
 
     function resetCounters() {
@@ -544,11 +550,9 @@
         resetCounters(); renderGrid();
     }
 
-    // 初始化啟動
     calculateSingleTime();
-    compileLayoutAndAssignIds(); // 執行預設編譯
+    compileLayoutAndAssignIds(); 
     
-    // 將預設的第一台車設為目標
     for(let r=0; r<5; r++) for(let c=0; c<5; c++) if(currentLayout[r][c] > 0) { targetCar = currentLayout[r][c]; break; }
     document.getElementById('target-display').innerText = targetCar ? targetCar + " 號車" : "無";
     
